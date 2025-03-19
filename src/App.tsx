@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -24,7 +23,7 @@ const PageTransition = ({ children }: { children: React.ReactNode }) => {
   }, [location.pathname]);
   
   return (
-    <div className="page-transition-enter page-transition-enter-active">
+    <div className="page-transition-enter page-transition-enter-active min-h-screen">
       {children}
     </div>
   );
