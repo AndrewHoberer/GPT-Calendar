@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar as CalendarIcon, Clock, BookOpen, Tag, AlertTriangle } from 'lucide-react';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
@@ -7,21 +7,16 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
-
-interface Event {
-  id: string;
-  title: string;
-  date: string;
-  time: string;
-  category: string;
-  course: string;
-  priority: "low" | "medium" | "high";
-}
+import { calendarService, Event } from '@/services/calendarService';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 const Calendar = () => {
+  const { user } = useAuth();
   const [date, setDate] = useState<Date | undefined>(new Date());
-  const [events, setEvents] = useState<Event[]>(mockEvents);
+  const [events, setEvents] = useState<Event[]>([]);
   const [showAddEventForm, setShowAddEventForm] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [newEvent, setNewEvent] = useState({
     title: '',
     date: '',
@@ -32,13 +27,34 @@ const Calendar = () => {
     description: ''
   });
 
+  useEffect(() => {
+    if (user && date) {
+      loadEvents();
+    }
+  }, [user, date]);
+
+  const loadEvents = async () => {
+    if (!user || !date) return;
+    
+    try {
+      setLoading(true);
+      const formattedDate = date.toISOString().split('T')[0];
+      const events = await calendarService.getEventsByDate(user.uid, formattedDate);
+      setEvents(events);
+    } catch (error: any) {
+      console.error('Error loading events:', error);
+      toast.error('Failed to load events');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleAddEvent = () => {
     setShowAddEventForm(true);
   };
 
   const handleCancelAddEvent = () => {
     setShowAddEventForm(false);
-    // Reset form
     setNewEvent({
       title: '',
       date: '',
@@ -58,21 +74,47 @@ const Calendar = () => {
     }));
   };
 
-  const handleSubmitEvent = (e: React.FormEvent) => {
+  const handleSubmitEvent = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Add event logic would go here
-    console.log('New event:', newEvent);
-    setShowAddEventForm(false);
-    // Reset form
-    setNewEvent({
-      title: '',
-      date: '',
-      time: '',
-      category: '',
-      course: '',
-      priority: 'medium',
-      description: ''
-    });
+    if (!user) return;
+
+    try {
+      setLoading(true);
+      await calendarService.addEvent(user.uid, newEvent);
+      toast.success('Event added successfully');
+      setShowAddEventForm(false);
+      loadEvents();
+      setNewEvent({
+        title: '',
+        date: '',
+        time: '',
+        category: '',
+        course: '',
+        priority: 'medium',
+        description: ''
+      });
+    } catch (error: any) {
+      console.error('Error adding event:', error);
+      toast.error('Failed to add event');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteEvent = async (eventId: string) => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+      await calendarService.deleteEvent(eventId);
+      toast.success('Event deleted successfully');
+      loadEvents();
+    } catch (error: any) {
+      console.error('Error deleting event:', error);
+      toast.error('Failed to delete event');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getPriorityColor = (priority: string) => {
@@ -97,7 +139,9 @@ const Calendar = () => {
           {/* Calendar */}
           <div className="md:col-span-2 bg-card rounded-xl shadow-sm p-4 border border-border">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">April 2023</h2>
+              <h2 className="text-xl font-semibold">
+                {date?.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </h2>
               <Button onClick={handleAddEvent}>Add Event</Button>
             </div>
             <CalendarComponent
@@ -114,15 +158,29 @@ const Calendar = () => {
               {date ? date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : 'Select a date'}
             </h2>
             
-            {events.length > 0 ? (
+            {loading ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>Loading events...</p>
+              </div>
+            ) : events.length > 0 ? (
               <div className="space-y-4">
                 {events.map(event => (
                   <div key={event.id} className="p-3 bg-background rounded-lg border border-border">
                     <div className="flex justify-between items-start">
                       <h3 className="font-medium">{event.title}</h3>
-                      <span className={cn("text-sm font-medium", getPriorityColor(event.priority))}>
-                        {event.priority.charAt(0).toUpperCase() + event.priority.slice(1)}
-                      </span>
+                      <div className="flex items-center space-x-2">
+                        <span className={cn("text-sm font-medium", getPriorityColor(event.priority))}>
+                          {event.priority.charAt(0).toUpperCase() + event.priority.slice(1)}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteEvent(event.id)}
+                          className="text-red-500 hover:text-red-600"
+                        >
+                          Delete
+                        </Button>
+                      </div>
                     </div>
                     <div className="mt-2 space-y-1 text-sm text-muted-foreground">
                       <div className="flex items-center">
@@ -137,6 +195,11 @@ const Calendar = () => {
                         <Tag className="h-4 w-4 mr-2" />
                         <span>{event.category}</span>
                       </div>
+                      {event.description && (
+                        <div className="mt-2 text-sm">
+                          {event.description}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -218,43 +281,22 @@ const Calendar = () => {
                     />
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
-                  <Label>Priority</Label>
-                  <div className="flex space-x-4">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="priority-low" 
-                        checked={newEvent.priority === 'low'} 
-                        onCheckedChange={() => setNewEvent(prev => ({...prev, priority: 'low'}))} 
-                      />
-                      <label htmlFor="priority-low" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-green-500">
-                        Low
-                      </label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="priority-medium" 
-                        checked={newEvent.priority === 'medium'} 
-                        onCheckedChange={() => setNewEvent(prev => ({...prev, priority: 'medium'}))} 
-                      />
-                      <label htmlFor="priority-medium" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-amber-500">
-                        Medium
-                      </label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="priority-high" 
-                        checked={newEvent.priority === 'high'} 
-                        onCheckedChange={() => setNewEvent(prev => ({...prev, priority: 'high'}))} 
-                      />
-                      <label htmlFor="priority-high" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-red-500">
-                        High
-                      </label>
-                    </div>
-                  </div>
+                  <Label htmlFor="priority">Priority</Label>
+                  <select
+                    id="priority"
+                    name="priority"
+                    value={newEvent.priority}
+                    onChange={(e) => setNewEvent(prev => ({ ...prev, priority: e.target.value as 'low' | 'medium' | 'high' }))}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="description">Description (Optional)</Label>
                   <Textarea 
@@ -262,17 +304,23 @@ const Calendar = () => {
                     name="description" 
                     value={newEvent.description} 
                     onChange={handleInputChange} 
-                    placeholder="Add details about this event..." 
-                    rows={3} 
+                    placeholder="Add any additional details..."
                   />
                 </div>
                 
-                <div className="flex justify-end space-x-2 pt-2">
-                  <Button type="button" variant="outline" onClick={handleCancelAddEvent}>
+                <div className="flex justify-end space-x-2 pt-4">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={handleCancelAddEvent}
+                  >
                     Cancel
                   </Button>
-                  <Button type="submit">
-                    Add Event
+                  <Button 
+                    type="submit"
+                    disabled={loading}
+                  >
+                    {loading ? 'Adding...' : 'Add Event'}
                   </Button>
                 </div>
               </form>
@@ -283,36 +331,5 @@ const Calendar = () => {
     </div>
   );
 };
-
-// Fix the priority value in the mock data
-const mockEvents: Event[] = [
-  {
-    id: "1",
-    title: "Math Assignment",
-    date: "2023-04-15",
-    time: "11:59 PM",
-    category: "Assignment",
-    course: "MATH 301",
-    priority: "high"
-  },
-  {
-    id: "2",
-    title: "Physics Lab Report",
-    date: "2023-04-18",
-    time: "5:00 PM",
-    category: "Lab",
-    course: "PHYS 201",
-    priority: "medium"
-  },
-  {
-    id: "3",
-    title: "English Essay Draft",
-    date: "2023-04-20",
-    time: "11:59 PM",
-    category: "Essay",
-    course: "ENGL 105",
-    priority: "low"
-  }
-];
 
 export default Calendar;

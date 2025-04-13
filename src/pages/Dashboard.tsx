@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   Calendar as CalendarIcon, 
   Grid, 
@@ -10,20 +9,40 @@ import {
   List, 
   BarChart3,
   ChevronRight,
-  Users
+  Users,
+  LogOut
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Logo from '@/components/ui-custom/Logo';
 import Button from '@/components/ui-custom/Button';
 import UploadCard from '@/components/ui-custom/UploadCard';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   
   const handleFileUpload = (file: File) => {
     console.log('File uploaded:', file);
     // In a real app, you would process the file and extract dates here
   };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast.success('Logged out successfully');
+      navigate('/login');
+    } catch (error: any) {
+      console.error('Logout error:', error);
+      toast.error(error.message || 'Failed to logout');
+    }
+  };
+
+  const userInitials = user?.displayName
+    ? user.displayName.split(' ').map(n => n[0]).join('').toUpperCase()
+    : user?.email?.[0].toUpperCase() || '?';
 
   return (
     <div className="min-h-screen flex bg-background">
@@ -94,14 +113,24 @@ const Dashboard = () => {
         </nav>
         
         <div className="p-4 border-t border-border mt-auto">
-          <div className="flex items-center">
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-              <span className="text-sm font-medium">LG</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                <span className="text-sm font-medium">{userInitials}</span>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium">{user?.displayName || user?.email}</p>
+                <p className="text-xs text-muted-foreground">Student</p>
+              </div>
             </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium">Leah Gonzalez</p>
-              <p className="text-xs text-muted-foreground">Student</p>
-            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLogout}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <LogOut size={18} />
+            </Button>
           </div>
         </div>
       </div>
@@ -122,7 +151,7 @@ const Dashboard = () => {
             
             <div className="relative">
               <button className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary md:hidden">
-                <span className="text-sm font-medium">LG</span>
+                <span className="text-sm font-medium">{userInitials}</span>
               </button>
             </div>
           </div>
@@ -133,7 +162,7 @@ const Dashboard = () => {
           {activeTab === 'overview' && (
             <div className="animate-fade-in">
               <header className="mb-8">
-                <h1 className="text-2xl font-semibold">Welcome back, Leah</h1>
+                <h1 className="text-2xl font-semibold">Welcome back, {user?.displayName || 'there'}</h1>
                 <p className="text-muted-foreground">Here's an overview of your schedule and upcoming deadlines.</p>
               </header>
               
