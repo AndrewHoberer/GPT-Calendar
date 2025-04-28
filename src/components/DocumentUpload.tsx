@@ -35,6 +35,7 @@ export const DocumentUpload = () => {
     setUploading(true);
 
     try {
+      console.log("yoo"); // temporary for testing
       const document = await documentService.uploadDocument(user.uid, file);
       setDocuments(prev => [...prev, document]);
       toast.success('Document uploaded successfully');
@@ -84,7 +85,7 @@ export const DocumentUpload = () => {
             id="file-upload"
             className="hidden"
             onChange={handleFileUpload}
-            accept=".pdf,.doc,.docx,.txt"
+            accept=".pdf,.docx,.txt"
           />
           <Button
             asChild

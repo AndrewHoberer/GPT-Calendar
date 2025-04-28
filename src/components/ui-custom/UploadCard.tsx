@@ -14,7 +14,7 @@ interface UploadCardProps {
 const UploadCard: React.FC<UploadCardProps> = ({
   onFileUpload,
   maxFileSizeMB = 10,
-  acceptedFileTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/jpeg', 'image/png'],
+  acceptedFileTypes = ['application/pdf', 'plain/txt', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
   className,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
@@ -39,7 +39,7 @@ const UploadCard: React.FC<UploadCardProps> = ({
     setError(null);
     
     if (!acceptedFileTypes.includes(file.type)) {
-      setError('Invalid file type. Please upload a PDF, Word document, or image.');
+      setError('Invalid file type. Please upload a PDF, DOCX, or TXT.');
       return false;
     }
     

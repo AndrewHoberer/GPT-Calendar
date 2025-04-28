@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { DocumentUpload } from '@/components/DocumentUpload';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   Calendar as CalendarIcon, 
@@ -26,7 +27,6 @@ const Dashboard = () => {
   
   const handleFileUpload = (file: File) => {
     console.log('File uploaded:', file);
-    // In a real app, you would process the file and extract dates here
   };
 
   const handleLogout = async () => {
@@ -269,7 +269,8 @@ const Dashboard = () => {
               </header>
               
               <div className="max-w-2xl mx-auto">
-                <UploadCard onFileUpload={handleFileUpload} />
+                {/* Render DocumentUpload here */}
+                <DocumentUpload />
               </div>
             </div>
           )}
