@@ -1,3 +1,7 @@
+# GPT Calendar
+
+AI-powered calendar application for smart scheduling and task management.
+
 The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
 Follow these steps:
@@ -7,7 +11,7 @@ Follow these steps:
 git clone <YOUR_GIT_URL>
 
 # Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+cd gpt-calendar
 
 # Step 3: Install the necessary dependencies.
 npm i
