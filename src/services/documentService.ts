@@ -1,7 +1,9 @@
 import { storage, db } from '@/lib/firebase';
+import { CreateMLCEngine } from "@mlc-ai/web-llm";
 import { 
   ref, 
   uploadBytes, 
+  getBlob,
   getDownloadURL, 
   deleteObject 
 } from 'firebase/storage';
@@ -9,6 +11,7 @@ import {
   collection, 
   addDoc, 
   getDocs, 
+  getDoc,
   query, 
   where, 
   deleteDoc,
@@ -28,6 +31,7 @@ export interface Document {
   processedContent?: string;
   status: 'pending' | 'processing' | 'completed' | 'error';
 }
+let chat, messages = [];
 
 export const documentService = {
   async uploadDocument(userId: string, file: File): Promise<Document> {
@@ -91,22 +95,74 @@ export const documentService = {
 
   async processDocument(documentId: string): Promise<void> {
     try {
+      if (!chat) {
+        chat = await CreateMLCEngine("SmolLM2-360M-Instruct-q4f16_1-MLC");
+      }
+      messages = [
+        { role: "system", content: "Given split up input data from a user, parse all the important dates and deadlines from it, combining information from previous messages if neccesary, and format them with a new line between each event as follows: Brief description of event, date of event in format mm/dd/yy" },
+      ];
+
       // Update document status to processing
       const docRef = doc(db, 'documents', documentId);
       await updateDoc(docRef, { status: 'processing' });
 
-      // TODO: Implement AI processing logic here
-      // This could involve:
-      // 1. Downloading the document from Storage
-      // 2. Using an AI service to process the document
-      // 3. Storing the processed content back in Firestore
+      // Fetch the document metadata from Firestore
+      const documentSnapshot = await getDoc(docRef);
+      const documentData = documentSnapshot.data() as Document;
 
-      // For now, we'll simulate processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+      // Download the file from Firebase Storage
+      const storageRef = ref(storage, documentData.fileUrl);
+      const fileBlob = await getBlob(storageRef);
+
+      let fileText;
+      // Convert the file to text
+      if (documentData.fileType === 'application/pdf' || documentData.fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+        const fs = require('fs');
+        const path = require('path');
+        // Save the file locally
+        const localFilePath = path.join(__dirname, 'temp', documentData.fileName);
+        fs.writeFileSync(localFilePath, Buffer.from(await fileBlob.arrayBuffer()));
+        if (documentData.fileType === 'application/pdf'){
+          const pdf = require('pdf-parse');
+          let dataBuffer = fs.readFileSync(localFilePath);
+          const pdfData = await pdf(dataBuffer);
+          fileText = pdfData.text; 
+          console.log("pdf translated"); // temporary for testing
+        }
+        else{
+          const mammoth = require('mammoth');
+          const mammothData = await mammoth.extractRawText({ path: localFilePath });
+          fileText =  mammothData.value; 
+        }
+        // Clean up: Delete the local file after processing
+        fs.unlinkSync(localFilePath);
+      }
+      else{
+        fileText = await fileBlob.text();
+      }
+
+      // The ai can only process 4096 tokens at a time so splitting into chunks of 2500 words
+      const words = fileText.split(/\s+/); // Split text into words
+      let processed = "";
+      for (let i = 0; i < words.length; i += 2500) {
+        const chunk = (words.slice(i, i + 2500).join(" ")); // Create a chunk
+        messages.push({ role: "user", content: chunk });
+        console.log(chunk); // temporary for testing
+        const reply = await chat.chat.completions.create({ messages, });
+        messages.push({ role: "assistant", content: reply.choices[0].message.content });
+        console.log(reply.choices[0].message.content); // temporary for testing
+        processed += reply.choices[0].message.content + '\n';
+      } 
+      /*
+        Possible additions to increase efficiency and user experience:
+         - Add a progress bar to show the user how far along the processing is
+         - gzip compression, Set proper HTTP caching headers, worker script, turn on webgpu,
+           add chat capability to ask when certain deadlines are, ad hour to ai date
+      */
+      console.log(processed); // temporary for testing
       await updateDoc(docRef, {
         status: 'completed',
-        processedContent: 'Sample processed content'
+        processedContent: processed
       });
     } catch (error) {
       console.error('Error processing document:', error);
