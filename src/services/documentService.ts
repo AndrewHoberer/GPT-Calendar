@@ -1,136 +1,35 @@
-import { storage, db } from '@/lib/firebase';
 import { CreateMLCEngine } from "@mlc-ai/web-llm";
-import { 
-  ref, 
-  uploadBytes, 
-  getBlob,
-  getDownloadURL, 
-  deleteObject 
-} from 'firebase/storage';
-import { 
-  collection, 
-  addDoc, 
-  getDocs, 
-  getDoc,
-  query, 
-  where, 
-  deleteDoc,
-  doc,
-  Timestamp,
-  updateDoc
-} from 'firebase/firestore';
+import * as path from 'path';
+import * as fs from 'fs';
+import * as mammoth from 'mammoth';
 
-export interface Document {
-  id: string;
-  userId: string;
-  fileName: string;
-  fileUrl: string;
-  fileType: string;
-  fileSize: number;
-  uploadDate: Date;
-  processedContent?: string;
-  status: 'pending' | 'processing' | 'completed' | 'error';
-}
 let chat, messages = [];
 
 export const documentService = {
-  async uploadDocument(userId: string, file: File): Promise<Document> {
-    try {
-      // Create a unique file name
-      const timestamp = Date.now();
-      const fileName = `${userId}/${timestamp}-${file.name}`;
-      const storageRef = ref(storage, fileName);
-
-      // Upload file to Firebase Storage
-      const snapshot = await uploadBytes(storageRef, file);
-      const downloadUrl = await getDownloadURL(snapshot.ref);
-
-      // Create document record in Firestore
-      const documentData = {
-        userId,
-        fileName: file.name,
-        fileUrl: downloadUrl,
-        fileType: file.type,
-        fileSize: file.size,
-        uploadDate: Timestamp.now(),
-        status: 'pending' as const
-      };
-
-      const docRef = await addDoc(collection(db, 'documents'), documentData);
-      return { id: docRef.id, ...documentData, uploadDate: documentData.uploadDate.toDate() };
-    } catch (error) {
-      console.error('Error uploading document:', error);
-      throw error;
-    }
-  },
-
-  async getDocuments(userId: string): Promise<Document[]> {
-    const documentsQuery = query(
-      collection(db, 'documents'),
-      where('userId', '==', userId)
-    );
-
-    const querySnapshot = await getDocs(documentsQuery);
-    return querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      uploadDate: doc.data().uploadDate.toDate()
-    })) as Document[];
-  },
-
-  async deleteDocument(documentId: string, fileUrl: string): Promise<void> {
-    try {
-      // Delete from Storage
-      const storageRef = ref(storage, fileUrl);
-      await deleteObject(storageRef);
-
-      // Delete from Firestore
-      const docRef = doc(db, 'documents', documentId);
-      await deleteDoc(docRef);
-    } catch (error) {
-      console.error('Error deleting document:', error);
-      throw error;
-    }
-  },
-
-  async processDocument(documentId: string): Promise<void> {
+  async processDocument(file: File): Promise<void> {
     try {
       if (!chat) {
-        chat = await CreateMLCEngine("SmolLM2-360M-Instruct-q4f16_1-MLC");
+        console.log("Creating MLC engine"); // temporary for testing
+        chat = await CreateMLCEngine("Llama-3.2-1B-Instruct-q4f16_1-MLC");
       }
       messages = [
-        { role: "system", content: "Given split up input data from a user, parse all the important dates and deadlines from it, combining information from previous messages if neccesary, and format them with a new line between each event as follows: Brief description of event, date of event in format mm/dd/yy" },
+        { role: "system", content: "format any dates in document as: 'event name, date in format mm/dd' Do not write any text other than the event name comma month month slash day day newline. For example: 'Assignment 5, 08/23" },
       ];
-
-      // Update document status to processing
-      const docRef = doc(db, 'documents', documentId);
-      await updateDoc(docRef, { status: 'processing' });
-
-      // Fetch the document metadata from Firestore
-      const documentSnapshot = await getDoc(docRef);
-      const documentData = documentSnapshot.data() as Document;
-
-      // Download the file from Firebase Storage
-      const storageRef = ref(storage, documentData.fileUrl);
-      const fileBlob = await getBlob(storageRef);
-
+      console.log("hello"); // temporary for testing
+      /*
       let fileText;
       // Convert the file to text
-      if (documentData.fileType === 'application/pdf' || documentData.fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-        const fs = require('fs');
-        const path = require('path');
+      if (file.type === 'application/pdf' || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
         // Save the file locally
-        const localFilePath = path.join(__dirname, 'temp', documentData.fileName);
-        fs.writeFileSync(localFilePath, Buffer.from(await fileBlob.arrayBuffer()));
-        if (documentData.fileType === 'application/pdf'){
-          const pdf = require('pdf-parse');
+        const localFilePath = path.join('temp', file.name);
+        fs.writeFileSync(localFilePath, Buffer.from(await file.arrayBuffer()));
+        if (file.type === 'application/pdf'){
           let dataBuffer = fs.readFileSync(localFilePath);
           const pdfData = await pdf(dataBuffer);
           fileText = pdfData.text; 
-          console.log("pdf translated"); // temporary for testing
+          console.log("pdf translated"); // temporary for testing 
         }
         else{
-          const mammoth = require('mammoth');
           const mammothData = await mammoth.extractRawText({ path: localFilePath });
           fileText =  mammothData.value; 
         }
@@ -138,8 +37,8 @@ export const documentService = {
         fs.unlinkSync(localFilePath);
       }
       else{
-        fileText = await fileBlob.text();
-      }
+        fileText = fs.readFileSync(file.name, 'utf8');
+      } 
 
       // The ai can only process 4096 tokens at a time so splitting into chunks of 2500 words
       const words = fileText.split(/\s+/); // Split text into words
@@ -153,21 +52,18 @@ export const documentService = {
         console.log(reply.choices[0].message.content); // temporary for testing
         processed += reply.choices[0].message.content + '\n';
       } 
-      /*
+      
         Possible additions to increase efficiency and user experience:
          - Add a progress bar to show the user how far along the processing is
          - gzip compression, Set proper HTTP caching headers, worker script, turn on webgpu,
            add chat capability to ask when certain deadlines are, ad hour to ai date
-      */
-      console.log(processed); // temporary for testing
-      await updateDoc(docRef, {
-        status: 'completed',
-        processedContent: processed
-      });
+      console.log(processed); // temporary for testing */
+      messages.push({ role: "user", content: "Exam 2 – Apr 23rd (Wednesday) Assignment 1 – Feb 16th (Sunday) Assignment 2 – Mar 2nd (Sunday) Assignment 3 – Mar 30th (Sunday) Assignment 4 – Apr 20th (Sunday) University Closings: Spring Break - Mar 16th – Mar 23rd  Final Project Team formation Due – Feb 2nd (Sunday) Final Project Proposal Due – Feb th (Sunday) Final Project Deliverable 1 Due – Mar 30th (Sunday) Final Project Deliverable 2 Due – Apr 27th (Sunday) Final Project Presentation Week – Apr 28th, Apr 30th, May 5th, May 7th Assignment and Grading Policy The final grade will be based on programming assignments, exam 1, exam 2 and final projects. Each student is required to complete assignments individually while the project is team effort (Team of FOUR). The final grade will be composed of the following parts: Homework Assignment  			20% Exam 1					20% Exam 2					20% Project						40%" });
+      const reply = await chat.chat.completions.create({ messages, });
+      console.log(reply.choices[0].message.content); // temporary for testing
+      console.log("done"); // temporary for testing
     } catch (error) {
       console.error('Error processing document:', error);
-      const docRef = doc(db, 'documents', documentId);
-      await updateDoc(docRef, { status: 'error' });
       throw error;
     }
   }
