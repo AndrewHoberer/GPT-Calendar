@@ -1,67 +1,107 @@
 import { CreateMLCEngine } from "@mlc-ai/web-llm";
-import * as path from 'path';
-import * as fs from 'fs';
-import * as mammoth from 'mammoth';
+import pdfToText from 'react-pdftotext'
+import { calendarService } from './calendarService';
 
 let chat, messages = [];
 
 export const documentService = {
-  async processDocument(file: File): Promise<void> {
+  async processDocument(file: File, userId: string, onProgress?: (progress: number) => void): Promise<void> {
     try {
       if (!chat) {
         console.log("Creating MLC engine"); // temporary for testing
-        chat = await CreateMLCEngine("Llama-3.2-1B-Instruct-q4f16_1-MLC");
+        chat = await CreateMLCEngine("Llama-3.2-3B-Instruct-q4f32_1-MLC");
       }
       messages = [
-        { role: "system", content: "format any dates in document as: 'event name, date in format mm/dd' Do not write any text other than the event name comma month month slash day day newline. For example: 'Assignment 5, 08/23" },
+        { role: "system", content: "write every date with its corresponding events and absolutely no other text. Format each line as: 'event name, month day'. For example: 'event 5, January 15'" },
       ];
-      console.log("hello"); // temporary for testing
-      /*
+      
       let fileText;
       // Convert the file to text
-      if (file.type === 'application/pdf' || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-        // Save the file locally
-        const localFilePath = path.join('temp', file.name);
-        fs.writeFileSync(localFilePath, Buffer.from(await file.arrayBuffer()));
-        if (file.type === 'application/pdf'){
-          let dataBuffer = fs.readFileSync(localFilePath);
-          const pdfData = await pdf(dataBuffer);
-          fileText = pdfData.text; 
-          console.log("pdf translated"); // temporary for testing 
-        }
-        else{
-          const mammothData = await mammoth.extractRawText({ path: localFilePath });
-          fileText =  mammothData.value; 
-        }
-        // Clean up: Delete the local file after processing
-        fs.unlinkSync(localFilePath);
+      if (file.type === 'application/pdf') {
+        fileText = await pdfToText(file);
+      } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+        const mammoth = await import('mammoth');
+        const result = await mammoth.extractRawText({arrayBuffer: await file.arrayBuffer()});
+        fileText = result.value;
+      } else if (file.type === 'text/plain') {
+        fileText = await file.text();
+      } else {
+        throw new Error('Unsupported file type. Please upload a PDF, DOCX, or TXT file.');
       }
-      else{
-        fileText = fs.readFileSync(file.name, 'utf8');
-      } 
+      onProgress?.(30);
 
       // The ai can only process 4096 tokens at a time so splitting into chunks of 2500 words
       const words = fileText.split(/\s+/); // Split text into words
       let processed = "";
+      const totalChunks = Math.ceil(words.length / 2500);
+      
       for (let i = 0; i < words.length; i += 2500) {
         const chunk = (words.slice(i, i + 2500).join(" ")); // Create a chunk
+        console.log(chunk);
         messages.push({ role: "user", content: chunk });
-        console.log(chunk); // temporary for testing
         const reply = await chat.chat.completions.create({ messages, });
+        messages.pop();
         messages.push({ role: "assistant", content: reply.choices[0].message.content });
-        console.log(reply.choices[0].message.content); // temporary for testing
         processed += reply.choices[0].message.content + '\n';
-      } 
+        console.log(processed);
+        
+        // Update progress based on chunks processed
+        const progress = 30 + Math.floor((i / 2500 / totalChunks) * 40); // 30-70% during AI processing
+        onProgress?.(progress);
+      }
+
+      // Parse the AI's response and create calendar events
+      const lines = processed.split('\n').filter(line => line.trim());
+      const totalEvents = lines.length;
       
-        Possible additions to increase efficiency and user experience:
-         - Add a progress bar to show the user how far along the processing is
-         - gzip compression, Set proper HTTP caching headers, worker script, turn on webgpu,
-           add chat capability to ask when certain deadlines are, ad hour to ai date
-      console.log(processed); // temporary for testing */
-      messages.push({ role: "user", content: "Exam 2 – Apr 23rd (Wednesday) Assignment 1 – Feb 16th (Sunday) Assignment 2 – Mar 2nd (Sunday) Assignment 3 – Mar 30th (Sunday) Assignment 4 – Apr 20th (Sunday) University Closings: Spring Break - Mar 16th – Mar 23rd  Final Project Team formation Due – Feb 2nd (Sunday) Final Project Proposal Due – Feb th (Sunday) Final Project Deliverable 1 Due – Mar 30th (Sunday) Final Project Deliverable 2 Due – Apr 27th (Sunday) Final Project Presentation Week – Apr 28th, Apr 30th, May 5th, May 7th Assignment and Grading Policy The final grade will be based on programming assignments, exam 1, exam 2 and final projects. Each student is required to complete assignments individually while the project is team effort (Team of FOUR). The final grade will be composed of the following parts: Homework Assignment  			20% Exam 1					20% Exam 2					20% Project						40%" });
-      const reply = await chat.chat.completions.create({ messages, });
-      console.log(reply.choices[0].message.content); // temporary for testing
-      console.log("done"); // temporary for testing
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        // Split by the last comma
+        const lastCommaIndex = line.lastIndexOf(',');
+        if (lastCommaIndex === -1) continue;
+        
+        const title = line.substring(0, lastCommaIndex).trim();
+        const dateStr = line.substring(lastCommaIndex + 1).trim();
+        if (!title || !dateStr) continue;
+
+        try {
+          // Remove leading single quote from title if present
+          const cleanTitle = title.startsWith("'") ? title.slice(1) : title;
+          
+          // Parse the date
+          const [month, dayWithOrdinal] = dateStr.split(' ').map(s => s.trim());
+          // Remove ordinal indicators (st, nd, rd, th) from the day
+          const day = dayWithOrdinal.replace(/(\d+)(st|nd|rd|th)/, '$1');
+          const currentYear = new Date().getFullYear();
+          const date = new Date(`${month} ${day}, ${currentYear}`);
+          
+          // Validate the date
+          if (isNaN(date.getTime())) {
+            console.warn(`Invalid date format: ${dateStr}`);
+            continue;
+          }
+
+          // Create calendar event
+          await calendarService.addEvent(userId, {
+            title: cleanTitle,
+            date: date.toISOString().split('T')[0],
+            time: '00:00', // Default to midnight
+            category: 'Document Import',
+            course: file.name.replace(/\.[^/.]+$/, ''), // Remove file extension
+            priority: 'medium',
+            description: `Imported from document: ${file.name}`
+          });
+
+          // Update progress based on events created
+          const progress = 70 + Math.floor((i / totalEvents) * 30); // 70-100% during event creation
+          onProgress?.(progress);
+        } catch (error) {
+          console.warn(`Failed to process date: ${dateStr}`, error);
+          continue;
+        }
+      }
+      
+      onProgress?.(100); // Complete
     } catch (error) {
       console.error('Error processing document:', error);
       throw error;
