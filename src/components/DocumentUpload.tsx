@@ -1,3 +1,6 @@
+// written by: Ammar Akif and Andrew Hoberer
+// debugged by: Ammar Akif and Andrew Hoberer
+// tested by: Hussnain Yasir 
 import React, { useState, useEffect } from 'react';
 import { Upload, File, Trash2, Loader2, Edit2, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,6 +18,7 @@ export const DocumentUpload = () => {
   const [processedEvents, setProcessedEvents] = useState<Event[]>([]);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [collapsedSyllabi, setCollapsedSyllabi] = useState<Set<string>>(new Set());
+  const [webGPUError, setWebGPUError] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
     title: '',
     date: '',
@@ -60,6 +64,7 @@ export const DocumentUpload = () => {
 
     try {
       setProcessing({ name: file.name, progress: 0 });
+      setWebGPUError(null);
       
       // Create a progress callback
       const onProgress = (progress: number) => {
@@ -70,9 +75,13 @@ export const DocumentUpload = () => {
       setProcessing(null);
       toast.success('Document processed successfully');
       loadProcessedEvents();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading document:', error);
-      toast.error('Failed to upload document');
+      if (error.message && error.message.includes('WebGPU')) {
+        setWebGPUError(error.message);
+      } else {
+        toast.error('Failed to upload document');
+      }
       setProcessing(null);
     }
   };
@@ -150,6 +159,12 @@ export const DocumentUpload = () => {
 
   return (
     <div className="space-y-6">
+      {webGPUError && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <p className="text-amber-800">{webGPUError}</p>
+        </div>
+      )}
+      
       <div className="flex items-center justify-center">
         <div className="relative">
           <input

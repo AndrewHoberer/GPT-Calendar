@@ -18,6 +18,9 @@ npm i
 
 # Step 4: Start the development server with auto-reloading and an instant preview.
 npm run dev
+
+# Step 5 (optional): 
+In order to use the ai document parsing, you must use a browser with webgpu and have it enabled in the settings
 ```
 
 **Edit a file directly in GitHub**

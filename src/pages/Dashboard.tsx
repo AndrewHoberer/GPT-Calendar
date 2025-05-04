@@ -1,3 +1,6 @@
+// written by: Ammar Akif and Andrew Hoberer
+// debugged by: Ammar Akif and Andrew Hoberer
+// tested by: Hussnain Yasir 
 import React, { useState, useEffect } from 'react';
 import { DocumentUpload } from '@/components/DocumentUpload';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
@@ -16,12 +19,10 @@ import {
 import { cn } from '@/lib/utils';
 import Logo from '@/components/ui-custom/Logo';
 import Button from '@/components/ui-custom/Button';
-import UploadCard from '@/components/ui-custom/UploadCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { TasksList } from '@/components/TasksList';
 import { calendarService, Event } from '@/services/calendarService';
-import { documentService } from '@/services/documentService';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -79,12 +80,6 @@ const Dashboard = () => {
     } catch (error) {
       console.error('Error loading statistics:', error);
     }
-  };
-
-  const handleFileUpload = (file: File) => {
-    // The file is already processed by the UploadCard component
-    // We just need to switch to the upload tab to show the processed events
-    setActiveTab('upload');
   };
 
   const handleLogout = async () => {
@@ -289,7 +284,7 @@ const Dashboard = () => {
             <div className="animate-fade-in">
               <header className="mb-8">
                 <h1 className="text-2xl font-semibold">Upload Documents</h1>
-                <p className="text-muted-foreground">Upload syllabi or assignment sheets to extract deadlines automatically.</p>
+                <p className="text-muted-foreground">Upload syllabi or assignment sheets to extract deadlines automatically. (WebGPU must be enabled)</p>
               </header>
               
               <div className="w-full">

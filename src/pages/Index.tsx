@@ -1,4 +1,6 @@
-
+// written by: Ammar Akif
+// debugged by: Ammar Akif
+// tested by: Hussnain Yasir 
 import React from 'react';
 import Navbar from '@/components/ui-custom/Navbar';
 import Hero from '@/components/ui-custom/Hero';

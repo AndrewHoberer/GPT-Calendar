@@ -1,3 +1,6 @@
+// written by: Andrew Hoberer
+// debugged by: Andrew Hoberer
+// tested by: Hussnain Yasir 
 import { CreateMLCEngine } from "@mlc-ai/web-llm";
 import pdfToText from 'react-pdftotext'
 import { calendarService } from './calendarService';
@@ -8,11 +11,14 @@ export const documentService = {
   async processDocument(file: File, userId: string, onProgress?: (progress: number) => void): Promise<void> {
     try {
       if (!chat) {
-        console.log("Creating MLC engine"); // temporary for testing
-        chat = await CreateMLCEngine("Llama-3.2-3B-Instruct-q4f32_1-MLC");
+        try {
+          chat = await CreateMLCEngine("Llama-3.2-3B-Instruct-q4f32_1-MLC");
+        } catch (error) {
+          throw new Error("WebGPU must be enabled in your browser to use this feature. Please enable WebGPU in your browser settings or use a browser that supports WebGPU.");
+        }
       }
       messages = [
-        { role: "system", content: "write every date with its corresponding events and absolutely no other text. Format each line as: 'event name, month day'. For example: 'event 5, January 15'" },
+        { role: "system", content: "write every date with its corresponding events and absolutely no other text. Format each line as: 'event name, month day'. For example: 'Assignment 5, January 15'" },
       ];
       
       let fileText;
