@@ -1,5 +1,5 @@
-// written by: Ammar Akif
-// debugged by: Ammar Akif
+// written by: Ammar Akif and Leah Gonzalez
+// debugged by: Ammar Akif and Leah Gonzalez
 // tested by: Hussnain Yasir 
 import React from 'react';
 import Navbar from '@/components/ui-custom/Navbar';

@@ -1,5 +1,5 @@
-// written by: Ammar Akif and Andrew Hoberer
-// debugged by: Ammar Akif and Andrew Hoberer
+// written by: Ammar Akif and Andrew Hoberer and Leah Gonzalez
+// debugged by: Ammar Akif and Andrew Hoberer and Leah Gonzalez
 // tested by: Hussnain Yasir 
 import React, { useState, useEffect } from 'react';
 import { DocumentUpload } from '@/components/DocumentUpload';
