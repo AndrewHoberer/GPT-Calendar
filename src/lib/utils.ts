@@ -1,6 +1,6 @@
-// written by: Ammar Akif
-// debugged by: Ammar Akif
-// tested by: Hussnain Yasir 
+/* written by: Ammar Akif
+debugged by: Ammar Akif
+tested by: Hussnain Yasir */
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 

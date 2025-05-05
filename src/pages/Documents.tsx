@@ -1,6 +1,6 @@
-// written by: Ammar Akif and Leah Gonzalez
-// debugged by: Ammar Akif and Leah Gonzalez
-// tested by: Hussnain Yasir 
+/* written by: Ammar Akif and Leah Gonzalez
+debugged by: Ammar Akif and Leah Gonzalez
+tested by: Hussnain Yasir */
 import { DocumentUpload } from '@/components/DocumentUpload';
 
 const Documents = () => {

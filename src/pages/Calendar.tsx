@@ -1,6 +1,6 @@
-// written by: Ammar Akif and Andrew Hoberer and Leah Gonzalez
-// debugged by: Ammar Akif and Andrew Hoberer and Leah Gonzalez
-// tested by: Hussnain Yasir 
+/* written by: Ammar Akif and Andrew Hoberer and Leah Gonzalez
+debugged by: Ammar Akif and Andrew Hoberer and Leah Gonzalez
+tested by: Hussnain Yasir */
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 

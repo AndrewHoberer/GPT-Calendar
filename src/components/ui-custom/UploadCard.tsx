@@ -1,6 +1,6 @@
-// written by: Ammar Akif and Andrew Hoberer and Leah Gonzalez
-// debugged by: Ammar Akif and Andrew Hoberer and Leah Gonzalez
-// tested by: Hussnain Yasir 
+/* written by: Ammar Akif and Leah Gonzalez and Andrew Hoberer
+debugged by: Ammar Akif and Leah Gonzalez and Andrew Hoberer
+tested by: Hussnain Yasir */
 import React, { useState, useRef } from 'react';
 import { Upload, X, Check, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';

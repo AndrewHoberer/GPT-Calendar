@@ -1,6 +1,6 @@
-// written by: Ammar Akif
-// debugged by: Ammar Akif
-// tested by: Hussnain Yasir 
+/* written by: Ammar Akif
+debugged by: Ammar Akif
+tested by: Hussnain Yasir */
 import { useToast } from "@/hooks/use-toast"
 import {
   Toast,

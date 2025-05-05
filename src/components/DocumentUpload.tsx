@@ -1,6 +1,6 @@
-// written by: Ammar Akif and Andrew Hoberer
-// debugged by: Ammar Akif and Andrew Hoberer
-// tested by: Hussnain Yasir 
+/* written by: Ammar Akif and Andrew Hoberer
+debugged by: Ammar Akif and Andrew Hoberer
+tested by: Hussnain Yasir */
 import React, { useState, useEffect } from 'react';
 import { Upload, File, Trash2, Loader2, Edit2, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';

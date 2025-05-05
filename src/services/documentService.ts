@@ -1,6 +1,6 @@
-// written by: Andrew Hoberer
-// debugged by: Andrew Hoberer
-// tested by: Hussnain Yasir 
+/* written by: Andrew Hoberer
+debugged by: Andrew Hoberer
+tested by: Hussnain Yasir */
 import { CreateMLCEngine } from "@mlc-ai/web-llm";
 import pdfToText from 'react-pdftotext'
 import { calendarService } from './calendarService';

@@ -1,6 +1,6 @@
-// written by: Ammar Akif
-// debugged by: Ammar Akif
-// tested by: Hussnain Yasir 
+/* written by: Ammar Akif
+debugged by: Ammar Akif
+tested by: Hussnain Yasir */
 import { cn } from "@/lib/utils"
 
 function Skeleton({

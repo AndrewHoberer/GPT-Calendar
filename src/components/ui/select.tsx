@@ -1,6 +1,6 @@
-// written by: Ammar Akif
-// debugged by: Ammar Akif
-// tested by: Hussnain Yasir 
+/* written by: Ammar Akif
+debugged by: Ammar Akif
+tested by: Hussnain Yasir */
 import * as React from "react"
 import * as SelectPrimitive from "@radix-ui/react-select"
 import { Check, ChevronDown, ChevronUp } from "lucide-react"

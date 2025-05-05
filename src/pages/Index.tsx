@@ -1,6 +1,6 @@
-// written by: Ammar Akif and Leah Gonzalez
-// debugged by: Ammar Akif and Leah Gonzalez
-// tested by: Hussnain Yasir 
+/* written by: Ammar Akif and Leah Gonzalez
+debugged by: Ammar Akif and Leah Gonzalez
+tested by: Hussnain Yasir */
 import React from 'react';
 import Navbar from '@/components/ui-custom/Navbar';
 import Hero from '@/components/ui-custom/Hero';

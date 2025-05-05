@@ -1,6 +1,6 @@
-// written by: Ammar Akif
-// debugged by: Ammar Akif
-// tested by: Hussnain Yasir 
+/* written by: Ammar Akif
+debugged by: Ammar Akif
+tested by: Hussnain Yasir */
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { 
   User,
