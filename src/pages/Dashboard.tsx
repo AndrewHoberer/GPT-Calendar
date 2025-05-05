@@ -47,15 +47,27 @@ const Dashboard = () => {
   const loadStatistics = async () => {
     if (!user) return;
     try {
-      // Get upcoming deadlines (next 7 days)
+      // Get upcoming deadlines (from yesterday through end of week)
       const allEvents = await calendarService.getEvents(user.uid);
-      const today = new Date();
-      const nextWeek = new Date(today);
-      nextWeek.setDate(today.getDate() + 7);
-      
+
+      // Set yesterday to midnight
+      const yesterday = new Date();
+      yesterday.setHours(0, 0, 0, 0);
+      yesterday.setDate(yesterday.getDate() - 1);
+
+      // Calculate end of next week (Sunday after this one)
+      const endOfNextWeek = new Date(yesterday);
+      // Find how many days until the end of this week (Sunday)
+      const daysToEndOfThisWeek = 7 - yesterday.getDay();
+      // Add 7 more days for the end of next week
+      endOfNextWeek.setDate(yesterday.getDate() + daysToEndOfThisWeek + 7);
+      endOfNextWeek.setHours(23, 59, 59, 999);
+
       const upcoming = allEvents.filter(event => {
         const eventDate = new Date(event.date);
-        return eventDate >= today && eventDate <= nextWeek;
+        eventDate.setHours(0, 0, 0, 0);
+        // Include if event is yesterday or later, up to end of next week
+        return eventDate >= yesterday && eventDate <= endOfNextWeek;
       }).sort((a, b) => {
         // First sort by date
         if (a.date !== b.date) {
@@ -69,7 +81,7 @@ const Dashboard = () => {
         const priorityOrder = { high: 0, medium: 1, low: 2 };
         return priorityOrder[a.priority as keyof typeof priorityOrder] - priorityOrder[b.priority as keyof typeof priorityOrder];
       });
-      
+
       setUpcomingDeadlines(upcoming.length);
       setUpcomingEvents(upcoming.slice(0, 4)); // Get first 4 upcoming events
 
@@ -226,7 +238,11 @@ const Dashboard = () => {
                       <DeadlineItem 
                         key={event.id}
                         title={event.title}
-                        dueDate={`${new Date(event.date).toLocaleDateString()} at ${event.time}`}
+                        dueDate={`${(() => {
+                          const date = new Date(event.date);
+                          date.setDate(date.getDate() + 1);
+                          return date.toLocaleDateString();
+                        })()} at ${event.time}`}
                         category={event.category}
                         priority={event.priority as 'low' | 'medium' | 'high'}
                       />

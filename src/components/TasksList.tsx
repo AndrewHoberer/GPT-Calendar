@@ -50,15 +50,25 @@ export const TasksList = () => {
     try {
       setIsLoading(true);
       const allEvents = await calendarService.getEvents(user.uid);
-      const today = new Date().toISOString().split('T')[0];
+
+      // Set yesterday to midnight
+      const yesterday = new Date();
+      yesterday.setHours(0, 0, 0, 0);
+      yesterday.setDate(yesterday.getDate() - 1);
+
       const upcomingEvents = allEvents
-        .filter(event => event.date >= today)
+        .filter(event => {
+          const eventDate = new Date(event.date);
+          eventDate.setHours(0, 0, 0, 0);
+          return eventDate >= yesterday;
+        })
         .sort((a, b) => {
           if (a.date === b.date) {
             return a.time.localeCompare(b.time);
           }
           return a.date.localeCompare(b.date);
         });
+
       setEvents(upcomingEvents);
       setAllEvents(allEvents.sort((a, b) => {
         if (a.date === b.date) {
