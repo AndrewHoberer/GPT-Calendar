@@ -1,4 +1,6 @@
-
+/* written by: Ammar Akif and Leah Gonzalez
+debugged by: Ammar Akif and Leah Gonzalez
+tested by: Hussnain Yasir */
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';

@@ -1,4 +1,6 @@
-
+/* written by: Ammar Akif and Leah Gonzalez
+debugged by: Ammar Akif and Leah Gonzalez
+tested by: Hussnain Yasir */
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Calendar, Clock, BookOpen } from 'lucide-react';
@@ -26,7 +28,7 @@ const Hero: React.FC = () => {
                 AI-Powered Calendar Management
               </div>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight animate-slide-up">
-                Smart Calendar for <span className="text-primary">Effortless</span> Scheduling
+                Smart Calendar for <span className="text-primary">GPT</span> Scheduling
               </h1>
               <p className="text-lg text-foreground/80 mt-4 max-w-lg animation-delay-100 animate-slide-up">
                 Revolutionize your time management with AI-powered document parsing, 
@@ -61,31 +63,6 @@ const Hero: React.FC = () => {
                 alt="Calendar App Interface" 
                 className="w-full h-auto object-cover"
               />
-            </div>
-
-            {/* Floating Elements */}
-            <div className="absolute -left-10 top-1/3 p-4 rounded-lg shadow-lg glass animate-float animation-delay-100">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                  <Calendar className="h-5 w-5" />
-                </div>
-                <div>
-                  <div className="text-xs font-medium">Project Deadline</div>
-                  <div className="text-sm text-foreground/80">Tomorrow, 3:00 PM</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="absolute -right-8 bottom-1/4 p-4 rounded-lg shadow-lg glass animate-float animation-delay-300">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                  <BookOpen className="h-5 w-5" />
-                </div>
-                <div>
-                  <div className="text-xs font-medium">AI Extract Complete</div>
-                  <div className="text-sm text-foreground/80">5 new deadlines found</div>
-                </div>
-              </div>
             </div>
           </div>
         </div>

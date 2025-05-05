@@ -1,5 +1,9 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+/* written by: Ammar Akif and Andrew Hoberer and Leah Gonzalez
+debugged by: Ammar Akif and Andrew Hoberer and Leah Gonzalez
+tested by: Hussnain Yasir */
+import React, { useState, useEffect } from 'react';
+import { DocumentUpload } from '@/components/DocumentUpload';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   Calendar as CalendarIcon, 
   Grid, 
@@ -15,18 +19,79 @@ import {
 import { cn } from '@/lib/utils';
 import Logo from '@/components/ui-custom/Logo';
 import Button from '@/components/ui-custom/Button';
-import UploadCard from '@/components/ui-custom/UploadCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { TasksList } from '@/components/TasksList';
+import { calendarService, Event } from '@/services/calendarService';
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
+  const [upcomingDeadlines, setUpcomingDeadlines] = useState(0);
+  const [uploadedDocuments, setUploadedDocuments] = useState(0);
+  const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
   
-  const handleFileUpload = (file: File) => {
-    console.log('File uploaded:', file);
-    // In a real app, you would process the file and extract dates here
+  useEffect(() => {
+    // Check if we have a tab in the location state
+    if (location.state?.activeTab) {
+      setActiveTab(location.state.activeTab);
+    }
+    // Load statistics
+    if (user) {
+      loadStatistics();
+    }
+  }, [location.state, user]);
+
+  const loadStatistics = async () => {
+    if (!user) return;
+    try {
+      // Get upcoming deadlines (from yesterday through end of week)
+      const allEvents = await calendarService.getEvents(user.uid);
+
+      // Set yesterday to midnight
+      const yesterday = new Date();
+      yesterday.setHours(0, 0, 0, 0);
+      yesterday.setDate(yesterday.getDate() - 1);
+
+      // Calculate end of next week (Sunday after this one)
+      const endOfNextWeek = new Date(yesterday);
+      // Find how many days until the end of this week (Sunday)
+      const daysToEndOfThisWeek = 7 - yesterday.getDay();
+      // Add 7 more days for the end of next week
+      endOfNextWeek.setDate(yesterday.getDate() + daysToEndOfThisWeek + 7);
+      endOfNextWeek.setHours(23, 59, 59, 999);
+
+      const upcoming = allEvents.filter(event => {
+        const eventDate = new Date(event.date);
+        eventDate.setHours(0, 0, 0, 0);
+        // Include if event is yesterday or later, up to end of next week
+        return eventDate >= yesterday && eventDate <= endOfNextWeek;
+      }).sort((a, b) => {
+        // First sort by date
+        if (a.date !== b.date) {
+          return a.date.localeCompare(b.date);
+        }
+        // Then sort by time
+        if (a.time !== b.time) {
+          return a.time.localeCompare(b.time);
+        }
+        // Finally sort by priority (high to low)
+        const priorityOrder = { high: 0, medium: 1, low: 2 };
+        return priorityOrder[a.priority as keyof typeof priorityOrder] - priorityOrder[b.priority as keyof typeof priorityOrder];
+      });
+
+      setUpcomingDeadlines(upcoming.length);
+      setUpcomingEvents(upcoming.slice(0, 4)); // Get first 4 upcoming events
+
+      // Get uploaded documents count by counting unique courses from Document Import events
+      const documentImportEvents = allEvents.filter(event => event.category === 'Document Import');
+      const uniqueCourses = new Set(documentImportEvents.map(event => event.course));
+      setUploadedDocuments(uniqueCourses.size);
+    } catch (error) {
+      console.error('Error loading statistics:', error);
+    }
   };
 
   const handleLogout = async () => {
@@ -47,14 +112,14 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen flex bg-background">
       {/* Sidebar */}
-      <div className="w-64 bg-sidebar border-r border-border hidden md:flex flex-col">
+      <div className="w-64 bg-sidebar border-r border-border hidden md:flex flex-col h-screen sticky top-0">
         <div className="p-4 border-b border-border">
           <Link to="/">
             <Logo />
           </Link>
         </div>
         
-        <nav className="flex-1 py-6 px-3 space-y-1">
+        <nav className="flex-1 py-6 px-3 space-y-1 overflow-y-auto">
           <SidebarLink 
             icon={<Grid size={18} />} 
             label="Overview" 
@@ -82,37 +147,9 @@ const Dashboard = () => {
             active={activeTab === 'upload'} 
             onClick={() => setActiveTab('upload')}
           />
-          <SidebarLink 
-            icon={<Bell size={18} />} 
-            label="Notifications" 
-            to="#" 
-            active={activeTab === 'notifications'} 
-            onClick={() => setActiveTab('notifications')}
-          />
-          <SidebarLink 
-            icon={<Users size={18} />} 
-            label="Collaboration" 
-            to="#" 
-            active={activeTab === 'collaboration'} 
-            onClick={() => setActiveTab('collaboration')}
-          />
-          <SidebarLink 
-            icon={<BarChart3 size={18} />} 
-            label="Analytics" 
-            to="#" 
-            active={activeTab === 'analytics'} 
-            onClick={() => setActiveTab('analytics')}
-          />
-          <SidebarLink 
-            icon={<Settings size={18} />} 
-            label="Settings" 
-            to="#" 
-            active={activeTab === 'settings'} 
-            onClick={() => setActiveTab('settings')}
-          />
         </nav>
         
-        <div className="p-4 border-t border-border mt-auto">
+        <div className="p-4 border-t border-border sticky bottom-0 bg-sidebar">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
@@ -166,30 +203,24 @@ const Dashboard = () => {
                 <p className="text-muted-foreground">Here's an overview of your schedule and upcoming deadlines.</p>
               </header>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <DashboardCard 
                   title="Upcoming Deadlines" 
-                  value="5" 
+                  value={upcomingDeadlines.toString()} 
                   description="Due this week" 
                   color="text-amber-500"
                   link="#"
                   linkText="View all deadlines"
-                />
-                <DashboardCard 
-                  title="Completed Tasks" 
-                  value="12" 
-                  description="Last 7 days" 
-                  color="text-green-500"
-                  link="#"
-                  linkText="Task history"
+                  onClick={() => setActiveTab('tasks')}
                 />
                 <DashboardCard 
                   title="Uploaded Documents" 
-                  value="3" 
+                  value={uploadedDocuments.toString()} 
                   description="Total documents" 
                   color="text-blue-500"
                   link="#"
                   linkText="View documents"
+                  onClick={() => setActiveTab('upload')}
                 />
               </div>
               
@@ -197,36 +228,37 @@ const Dashboard = () => {
                 <div className="glass rounded-xl p-6 border animate-scale-in">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="font-semibold">Upcoming Deadlines</h2>
-                    <Button variant="link" size="sm" asChild>
-                      <Link to="#">View Calendar</Link>
+                    <Button variant="link" size="sm" onClick={() => navigate('/calendar')}>
+                      View Calendar
                     </Button>
                   </div>
                   
                   <div className="space-y-4">
-                    <DeadlineItem 
-                      title="CS 3354: Requirements Document"
-                      dueDate="Tomorrow, 11:59 PM"
-                      category="Assignment"
-                      priority="high"
-                    />
-                    <DeadlineItem 
-                      title="MATH 2414: Quiz 3"
-                      dueDate="Mar 12, 10:00 AM"
-                      category="Quiz"
-                      priority="medium"
-                    />
-                    <DeadlineItem 
-                      title="HIST 1301: Research Paper Outline"
-                      dueDate="Mar 15, 11:59 PM"
-                      category="Assignment"
-                      priority="medium"
-                    />
-                    <DeadlineItem 
-                      title="PHIL 2306: Discussion Post"
-                      dueDate="Mar 16, 11:59 PM"
-                      category="Discussion"
-                      priority="low"
-                    />
+                    {upcomingEvents.map(event => (
+                      <DeadlineItem 
+                        key={event.id}
+                        title={event.title}
+                        dueDate={`${(() => {
+                          const date = new Date(event.date);
+                          date.setDate(date.getDate() + 1);
+                          return date.toLocaleDateString();
+                        })()} at ${event.time}`}
+                        category={event.category}
+                        priority={event.priority as 'low' | 'medium' | 'high'}
+                      />
+                    ))}
+                    {upcomingDeadlines > 4 && (
+                      <div className="pt-2">
+                        <Button 
+                          variant="link" 
+                          size="sm" 
+                          onClick={() => setActiveTab('tasks')}
+                          className="text-primary hover:text-primary/80"
+                        >
+                          View {upcomingDeadlines - 4} more deadlines...
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
                 
@@ -236,12 +268,14 @@ const Dashboard = () => {
                   </div>
                   
                   <div className="space-y-4">
-                    <UploadCard 
-                      onFileUpload={handleFileUpload}
-                      className="border-border"
-                    />
-                    
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <QuickActionCard 
+                        icon={<Upload size={20} />}
+                        title="Upload Documents"
+                        description="Process syllabi and assignments"
+                        to="#"
+                        onClick={() => setActiveTab('upload')}
+                      />
                       <QuickActionCard 
                         icon={<CalendarIcon size={20} />}
                         title="View Calendar"
@@ -253,6 +287,7 @@ const Dashboard = () => {
                         title="Manage Tasks"
                         description="Add or update tasks"
                         to="#"
+                        onClick={() => setActiveTab('tasks')}
                       />
                     </div>
                   </div>
@@ -265,16 +300,28 @@ const Dashboard = () => {
             <div className="animate-fade-in">
               <header className="mb-8">
                 <h1 className="text-2xl font-semibold">Upload Documents</h1>
-                <p className="text-muted-foreground">Upload syllabi or assignment sheets to extract deadlines automatically.</p>
+                <p className="text-muted-foreground">Upload syllabi or assignment sheets to extract deadlines automatically. (WebGPU must be enabled)</p>
               </header>
               
-              <div className="max-w-2xl mx-auto">
-                <UploadCard onFileUpload={handleFileUpload} />
+              <div className="w-full">
+                {/* Render DocumentUpload here */}
+                <DocumentUpload />
               </div>
             </div>
           )}
           
-          {/* Implement other tabs as needed */}
+          {activeTab === 'tasks' && (
+            <div className="animate-fade-in">
+              <header className="mb-8">
+                <h1 className="text-2xl font-semibold">Tasks</h1>
+                <p className="text-muted-foreground">Manage your upcoming tasks and deadlines.</p>
+              </header>
+              
+              <div className="w-full">
+                <TasksList />
+              </div>
+            </div>
+          )}
         </main>
       </div>
     </div>
@@ -317,18 +364,22 @@ interface DashboardCardProps {
   color: string;
   link: string;
   linkText: string;
+  onClick?: () => void;
 }
 
-const DashboardCard: React.FC<DashboardCardProps> = ({ title, value, description, color, link, linkText }) => (
+const DashboardCard: React.FC<DashboardCardProps> = ({ title, value, description, color, link, linkText, onClick }) => (
   <div className="glass rounded-xl p-6 border animate-scale-in">
     <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
     <p className={cn("text-3xl font-semibold mt-2", color)}>{value}</p>
     <p className="text-sm text-muted-foreground mt-1">{description}</p>
     <div className="mt-4">
-      <Link to={link} className="text-sm text-primary hover:underline flex items-center">
+      <button 
+        onClick={onClick}
+        className="text-sm text-primary hover:underline flex items-center"
+      >
         {linkText}
         <ChevronRight size={16} className="ml-1" />
-      </Link>
+      </button>
     </div>
   </div>
 );
@@ -370,10 +421,20 @@ interface QuickActionCardProps {
   title: string;
   description: string;
   to: string;
+  onClick?: () => void;
 }
 
-const QuickActionCard: React.FC<QuickActionCardProps> = ({ icon, title, description, to }) => (
-  <Link to={to} className="p-4 rounded-lg border hover:border-primary/50 hover:shadow-md transition-all group">
+const QuickActionCard: React.FC<QuickActionCardProps> = ({ icon, title, description, to, onClick }) => (
+  <Link 
+    to={to} 
+    onClick={(e) => {
+      if (to === "#" && onClick) {
+        e.preventDefault();
+        onClick();
+      }
+    }}
+    className="p-4 rounded-lg border hover:border-primary/50 hover:shadow-md transition-all group"
+  >
     <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-3 group-hover:bg-primary group-hover:text-white transition-colors">
       {icon}
     </div>

@@ -1,3 +1,6 @@
+/* written by: Ammar Akif and Leah Gonzalez
+debugged by: Ammar Akif and Leah Gonzalez
+tested by: Hussnain Yasir */
 import React from 'react';
 import { Slot } from "@radix-ui/react-slot";
 import { cn } from '@/lib/utils';

@@ -1,3 +1,6 @@
+/* written by: Ammar Akif and Andrew Hoberer
+debugged by: Ammar Akif and Andrew Hoberer
+tested by: Hussnain Yasir */
 import { db } from '@/lib/firebase';
 import { 
   collection, 
@@ -40,16 +43,18 @@ export const calendarService = {
   async getEvents(userId: string) {
     const eventsQuery = query(
       collection(db, 'events'),
-      where('userId', '==', userId),
-      orderBy('date', 'asc')
+      where('userId', '==', userId)
     );
 
     const querySnapshot = await getDocs(eventsQuery);
-    return querySnapshot.docs.map(doc => ({
+    const events = querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
       createdAt: doc.data().createdAt?.toDate()
     })) as Event[];
+
+    // Sort events by date in memory
+    return events.sort((a, b) => a.date.localeCompare(b.date));
   },
 
   async getEventsByDate(userId: string, date: string) {
@@ -80,5 +85,18 @@ export const calendarService = {
     const eventRef = doc(db, 'events', eventId);
     await deleteDoc(eventRef);
     return eventId;
+  },
+
+  async deleteEventsByCourse(userId: string, course: string) {
+    const eventsQuery = query(
+      collection(db, 'events'),
+      where('userId', '==', userId),
+      where('course', '==', course)
+    );
+
+    const querySnapshot = await getDocs(eventsQuery);
+    const deletePromises = querySnapshot.docs.map(doc => deleteDoc(doc.ref));
+    await Promise.all(deletePromises);
+    return querySnapshot.size;
   }
 }; 

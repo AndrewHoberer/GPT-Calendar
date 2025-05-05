@@ -1,4 +1,6 @@
-
+/* written by: Ammar Akif and Leah Gonzalez
+debugged by: Ammar Akif and Leah Gonzalez
+tested by: Hussnain Yasir */
 import React from 'react';
 import { Link } from 'react-router-dom';
 import Logo from './Logo';
@@ -49,7 +51,7 @@ const Footer: React.FC = () => {
         
         <div className="pt-8 border-t border-border/50 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-muted-foreground text-center md:text-left">
-            © {currentYear} SmartCalendar. All rights reserved.
+            © {currentYear} GPT Calendar. All rights reserved.
           </p>
           
           <div className="flex items-center space-x-6">

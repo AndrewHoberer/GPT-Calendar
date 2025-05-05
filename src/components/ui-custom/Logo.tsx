@@ -1,4 +1,6 @@
-
+/* written by: Ammar Akif and Leah Gonzalez
+debugged by: Ammar Akif and Leah Gonzalez
+tested by: Hussnain Yasir */
 import React from 'react';
 import { Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -33,7 +35,7 @@ const Logo: React.FC<LogoProps> = ({ size = 'md', withText = true, className }) 
       </div>
       {withText && (
         <span className={cn('font-medium', textSize)}>
-          Smart<span className="text-primary font-semibold">Calendar</span>
+          <span className="text-primary font-semibold">GPT</span> Calendar
         </span>
       )}
     </div>

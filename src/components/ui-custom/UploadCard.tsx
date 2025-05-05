@@ -1,8 +1,13 @@
-
+/* written by: Ammar Akif and Leah Gonzalez and Andrew Hoberer
+debugged by: Ammar Akif and Leah Gonzalez and Andrew Hoberer
+tested by: Hussnain Yasir */
 import React, { useState, useRef } from 'react';
 import { Upload, X, Check, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Button from './Button';
+import { documentService } from '@/services/documentService';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 interface UploadCardProps {
   onFileUpload?: (file: File) => void;
@@ -14,14 +19,16 @@ interface UploadCardProps {
 const UploadCard: React.FC<UploadCardProps> = ({
   onFileUpload,
   maxFileSizeMB = 10,
-  acceptedFileTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/jpeg', 'image/png'],
+  acceptedFileTypes = ['application/pdf', 'plain/txt', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
   className,
 }) => {
+  const { user } = useAuth();
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [progress, setProgress] = useState(0);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -39,7 +46,7 @@ const UploadCard: React.FC<UploadCardProps> = ({
     setError(null);
     
     if (!acceptedFileTypes.includes(file.type)) {
-      setError('Invalid file type. Please upload a PDF, Word document, or image.');
+      setError('Invalid file type. Please upload a PDF, DOCX, or TXT.');
       return false;
     }
     
@@ -54,9 +61,7 @@ const UploadCard: React.FC<UploadCardProps> = ({
   const handleFile = (file: File) => {
     if (validateFile(file)) {
       setFile(file);
-      if (onFileUpload) {
-        simulateFileUpload(file);
-      }
+      processFile(file);
     }
   };
 
@@ -82,18 +87,35 @@ const UploadCard: React.FC<UploadCardProps> = ({
     }
   };
 
-  const simulateFileUpload = (file: File) => {
+  const processFile = async (file: File) => {
+    if (!user) {
+      toast.error('Please log in to upload documents');
+      return;
+    }
+
     setIsLoading(true);
     setIsSuccess(false);
+    setProgress(0);
     
-    // Simulate API call delay
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      // Create a progress callback
+      const onProgress = (progress: number) => {
+        setProgress(progress);
+      };
+
+      await documentService.processDocument(file, user.uid, onProgress);
       setIsSuccess(true);
+      toast.success('Document processed successfully');
       if (onFileUpload) {
         onFileUpload(file);
       }
-    }, 2000);
+    } catch (error) {
+      console.error('Error processing document:', error);
+      toast.error('Failed to process document');
+      setError('Failed to process document. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const resetUpload = () => {
@@ -101,6 +123,7 @@ const UploadCard: React.FC<UploadCardProps> = ({
     setError(null);
     setIsLoading(false);
     setIsSuccess(false);
+    setProgress(0);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -184,21 +207,26 @@ const UploadCard: React.FC<UploadCardProps> = ({
           {isLoading && (
             <div className="mt-4">
               <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                <div className="h-full bg-primary rounded-full animate-shimmer bg-[length:400%_100%] bg-[linear-gradient(90deg,theme(colors.primary)_0%,theme(colors.primary/50)_50%,theme(colors.primary)_100%)]" />
+                <div 
+                  className="h-full bg-primary rounded-full transition-all duration-300"
+                  style={{ width: `${progress}%` }}
+                />
               </div>
-              <p className="text-xs text-center mt-2 text-muted-foreground">Extracting deadlines...</p>
+              <p className="text-xs text-center mt-2 text-muted-foreground">
+                Processing document... {Math.round(progress)}%
+              </p>
             </div>
           )}
           
           {isSuccess && (
             <div className="mt-4 p-3 bg-green-50 text-green-800 text-sm rounded-lg">
-              Document uploaded successfully! We've extracted the deadlines.
+              Document processed successfully! We've extracted the deadlines.
             </div>
           )}
           
           {!isLoading && !isSuccess && (
             <div className="mt-4">
-              <Button onClick={() => simulateFileUpload(file)} fullWidth>
+              <Button onClick={() => processFile(file)} fullWidth>
                 Process Document
               </Button>
             </div>
