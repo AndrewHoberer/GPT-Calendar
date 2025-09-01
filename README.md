@@ -9,6 +9,8 @@ https://www.youtube.com/watch?v=FbzuyRVk_Rw&ab_channel=AndyHoberer
 
 The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
+First you must replace .env.example with a .env file containing your individual firebase data then  
+
 Follow these steps:
 
 ```sh
